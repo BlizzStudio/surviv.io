@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival Game with Day-Night Cycle, Inventory, and Minimap</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #ddd;
+            overflow: hidden;
+            border: 1px solid #000;
+        }
+
+        #player {
+            width: 100px;
+            height: 100px;
+            
+            position: absolute;
+            border-radius: 50%;
+            z-index: 10;
+            background-image:url('https://i.ibb.co/ZV820BS/png-transparent-red-among-us-cartoons-among-us-removebg-preview.png" alt="png-transparent-red-among-us-cartoons-among-us-removebg-preview" border="0">');
+            background-size:contain;
+        }
+
+        .zombie {
+            width: 70px;
+            height: 70px;
+            background-image:url('https://i.ibb.co/fvLMght/among-us-mr-cheese-zombie-512x512.png" alt="among-us-mr-cheese-zombie-512x512" border="0">');
+            background-size:contain;
+            position: absolute;
+            border-radius: 50%;
+            z-index: 5;
+            
+        }
+
+        .chicken {
+            width: 50px;
+            height: 30px;
+            
+            position: absolute;
+            border-radius: 5px;
+                background-image:url('https://i.ibb.co/YT98wbg/images-removebg-preview-1.png" alt="images-removebg-preview-1" border="0">')    ;
+                background-size:cover;
+                
+        }
+
+        #joystick-container {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 20;
+        }
+
+        #inventory {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 120px;
+        }
+
+        .inventory-slot {
+            width: 40px;
+            height: 40px;
+            background: #333;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .inventory-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .day-night-cycle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #health-bar-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            height: 20px;
+            background: #000;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            z-index: 15;
+        }
+
+        #health-bar {
+            height: 100%;
+            background: red;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        #day-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 20px;
+            background: black;
+            padding: 10px;
+            border-radius: 10px;
+            z-index: 15;
+        }
+
+        #minimap {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid white;
+            z-index: 20;
+        }
+
+        #minimap-player {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: red;
+            border-radius: 50%;
+        }
+
+        .minimap-zombie {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: green;
+            border-radius: 50%;
+        }
+
+        .minimap-chicken {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: yellow;
+            border-radius: 50%;
+        }
+
+        .gun {
+            width: 40px;
+            height: 30px;
+            background: url('https://via.placeholder.com/40x30/000/fff?text=G') no-repeat center center;
+            background-size: cover;
+            position: absolute;
+            border-radius: 5px;
+        }
+
+        #fire-button {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            width: 80px;
+            height: 40px;
+            background: red;
+            color: white;
+            text-align: center;
+            line-height: 40px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 20;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .modal-content button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="day-counter">Day: 1</div>
+        <div id="minimap">
+            <div id="minimap-player"></div>
+        </div>
+        <div class="day-night-cycle"></div>
+        <div id="health-bar-container">
+            <div id="health-bar"></div>
+        </div>
+        <div id="joystick-container">
+            <div id="inventory">
+                <div class="inventory-slot" id="slot1"></div>
+                <div class="inventory-slot" id="slot2"></div>
+                <div class="inventory-slot" id="slot3"></div>
+                <div class="inventory-slot" id="slot4"></div>
+                <div class="inventory-slot" id="slot5"></div>
+                <div class="inventory-slot" id="slot6"></div>
+            </div>
+            <div id="joystick"></div>
+        </div>
+        <div id="fire-button">Fire</div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="game-over-modal">
+        <div class="modal-content">
+            <p>Game Over! You have been defeated.</p>
+            <button onclick="restartGame()">Restart</button>
+        </div>
+    </div>
+
+    <div class="modal" id="win-modal">
+        <div class="modal-content">
+            <p>Congratulations! You survived 5 days.</p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.8.5/nipplejs.min.js"></script>
+    <script>
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('game-container');
+        const dayCounter = document.getElementById('day-counter');
+        const healthBar = document.getElementById('health-bar');
+        const minimapPlayer = document.getElementById('minimap-player');
+        const dayNightCycle = document.querySelector('.day-night-cycle');
+        const fireButton = document.getElementById('fire-button');
+        const inventorySlots = Array.from(document.querySelectorAll('.inventory-slot'));
+        const minimap = document.getElementById('minimap');
+        const minimapPlayerElem = document.getElementById('minimap-player');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const winModal = document.getElementById('win-modal');
+        const joystickContainer = document.getElementById('joystick-container');
+
+        let zombies = [];
+        let chickens = [];
+        let playerX = window.innerWidth / 2;
+        let playerY = window.innerHeight / 2;
+        let playerHealth = 100;
+        let day = 1;
+        let speedFactor = 0.1;
+        let gunInHand = false;
+        const dayNightCycleDuration = 9000; // Time for a full day-night cycle (60 seconds)
+        const objectiveDays = 5; // Days to survive
+        let chickenSpawnInterval = setInterval(spawnChicken, 5000); // Spawn chickens every 5 seconds
+
+        // Initialize joystick
+        const joystick = nipplejs.create({
+            zone: joystickContainer,
+            mode: 'static',
+            position: { top: '50%', left: '50%' },
+            color: 'black'
+        });
+
+        joystick.on('move', (evt, data) => {
+            if (data.direction) {
+                let moveDistance = data.distance * speedFactor;
+                switch (data.direction.angle) {
+                    case 'up':
+                        playerY -= moveDistance;
+                        break;
+                    case 'down':
+                        playerY += moveDistance;
+                        break;
+                    case 'left':
+                        playerX -= moveDistance;
+                        break;
+                    case 'right':
+                        playerX += moveDistance;
+                        break;
+                }
+                // Ensure player stays within bounds
+                playerX = Math.max(0, Math.min(window.innerWidth - player.clientWidth, playerX));
+                playerY = Math.max(0, Math.min(window.innerHeight - player.clientHeight, playerY));
+                player.style.left = ${playerX}px;
+                player.style.top = ${playerY}px;
+
+                // Update minimap
+                minimapPlayerElem.style.left = ${(playerX / window.innerWidth) * 100}px;
+                minimapPlayerElem.style.top = ${(playerY / window.innerHeight) * 100}px;
+            }
+        });
+
+        function spawnChicken() {
+            const chicken = document.createElement('div');
+            chicken.className = 'chicken';
+            chicken.style.top = ${Math.random() * (window.innerHeight - 30)}px;
+            chicken.style.left = ${Math.random() * (window.innerWidth - 40)}px;
+            gameContainer.appendChild(chicken);
+            chickens.push(chicken);
+
+            setTimeout(() => {
+                chicken.remove();
+                chickens = chickens.filter(c => c !== chicken);
+            }, 7000);
+        }
+
+        function spawnZombie() {
+            const zombie = document.createElement('div');
+            zombie.className = 'zombie';
+            zombie.style.top = ${Math.random() * (window.innerHeight - 40)}px;
+            zombie.style.left = ${Math.random() * (window.innerWidth - 40)}px;
+            gameContainer.appendChild(zombie);
+            zombies.push(zombie);
+        }
+
+        function isColliding(rect1, rect2) {
+            return !(rect1.right < rect2.left || 
+                     rect1.left > rect2.right || 
+                     rect1.bottom < rect2.top || 
+                     rect1.top > rect2.bottom);
+        }
+
+        function updateZombiePositions() {
+            if (isNightTime()) {
+                zombies.forEach(zombie => {
+                    const zombieX = parseFloat(zombie.style.left);
+                    const zombieY = parseFloat(zombie.style.top);
+                    const dx = playerX - zombieX;
+                    const dy = playerY - zombieY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance > 0) {
+                        zombie.style.left = ${zombieX + (dx / distance) * 0.1}px;
+                        zombie.style.top = ${zombieY + (dy / distance) * 0.1}px;
+                    }
+
+                    // Ensure zombies stay within bounds
+                    if (zombieX < 0 || zombieX > window.innerWidth - zombie.clientWidth || 
+                        zombieY < 0 || zombieY > window.innerHeight - zombie.clientHeight) {
+                        zombie.style.left = ${Math.max(0, Math.min(window.innerWidth - zombie.clientWidth, zombieX))}px;
+                        zombie.style.top = ${Math.max(0, Math.min(window.innerHeight - zombie.clientHeight, zombieY))}px;
+                    }
+                });
+            }
+        }
+
+        function updateChickenPositions() {
+            chickens.forEach(chicken => {
+                // Random movement
+                const moveX = (Math.random() - 0.5) * 0.5;
+                const moveY = (Math.random() - 0.5) * 0.5;
+                let chickenX = parseFloat(chicken.style.left);
+                let chickenY = parseFloat(chicken.style.top);
+                chickenX = Math.max(0, Math.min(window.innerWidth - chicken.clientWidth, chickenX + moveX));
+                chickenY = Math.max(0, Math.min(window.innerHeight - chicken.clientHeight, chickenY + moveY));
+                chicken.style.left = ${chickenX}px;
+                chicken.style.top = ${chickenY}px;
+            });
+        }
+
+        function handleCollisions() {
+            const playerRect = player.getBoundingClientRect();
+            chickens.forEach(chicken => {
+                const chickenRect = chicken.getBoundingClientRect();
+                if (isColliding(playerRect, chickenRect)) {
+                    // Remove chicken from the screen
+                    chicken.remove();
+                    chickens = chickens.filter(c => c !== chicken);
+
+                    // Add chicken to inventory
+                    const availableSlot = inventorySlots.find(slot => slot.children.length === 0);
+                    if (availableSlot) {
+                        const slotImg = document.createElement('img');
+                        slotImg.src = 'https://i.ibb.co/YT98wbg/images-removebg-preview-1.png" alt="images-removebg-preview-1" border="0">'; // Chicken image URL
+                        slotImg.alt = 'Chicken';
+                        slotImg.className = 'inventory-item';
+                        slotImg.addEventListener('click', () => restoreHealth(slotImg, availableSlot));
+                        availableSlot.appendChild(slotImg);
+                    }
+                }
+            });
+
+            zombies.forEach(zombie => {
+                const zombieRect = zombie.getBoundingClientRect();
+                if (isColliding(playerRect, zombieRect)) {
+                    playerHealth -= 10;
+                    updateHealthBar();
+                }
+            });
+        }
+
+        function isNightTime() {
+            const currentTime = (Date.now() % dayNightCycleDuration) / dayNightCycleDuration;
+            return currentTime >= 0.5;
+        }
+
+        function updateDayNightCycle() {
+            if (isNightTime()) {
+                dayNightCycle.style.background = 'radial-gradient(circle, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.2) 70%)';
+                zombies.forEach(zombie => zombie.style.display = 'block');
+            } else {
+                dayNightCycle.style.background = 'radial-gradient(circle, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0) 70%)';
+                zombies.forEach(zombie => zombie.style.display = 'none');
+            }
+        }
+
+        function updateHealthBar() {
+            healthBar.style.width = ${playerHealth}%;
+            if (playerHealth <= 0) {
+                showModal(gameOverModal);
+            }
+        }
+
+        function restoreHealth(chickenImg, slot) {
+            if (playerHealth < 100) {
+                playerHealth = Math.min(100, playerHealth + 10);
+                updateHealthBar();
+                slot.innerHTML = ''; // Clear the slot
+            }
+        }
+
+        function showModal(modal) {
+            modal.style.display = 'flex';
+        }
+
+        function restartGame() {
+            gameOverModal.style.display = 'none';
+            winModal.style.display = 'none';
+            playerHealth = 100;
+            day = 1;
+            updateHealthBar();
+            updateDayNightCycle();
+            // Reload or reset game state
+        }
+
+        function fireButtonAction() {
+            zombies.forEach(zombie => zombie.remove());
+            zombies = [];
+        }
+
+        function spawnNPC() {
+            const npc = document.createElement('div');
+            npc.className = 'npc';
+            npc.style.top = ${Math.random() * (window.innerHeight - 40)}px;
+            npc.style.left = ${Math.random() * (window.innerWidth - 40)}px;
+            gameContainer.appendChild(npc);
+        }
+
+        function updateMinimap() {
+            // Clear previous minimap elements
+            minimap.innerHTML = '';
+
+            minimapPlayerElem.style.left = ${(playerX / window.innerWidth) * 100}px;
+            minimapPlayerElem.style.top = ${(playerY / window.innerHeight) * 100}px;
+
+            zombies.forEach(zombie => {
+                const zombieMinimap = document.createElement('div');
+                zombieMinimap.className = 'minimap-zombie';
+                zombieMinimap.style.left = ${(parseFloat(zombie.style.left) / window.innerWidth) * 100}px;
+                zombieMinimap.style.top = ${(parseFloat(zombie.style.top) / window.innerHeight) * 100}px;
+                minimap.appendChild(zombieMinimap);
+            });
+
+            chickens.forEach(chicken => {
+                const chickenMinimap = document.createElement('div');
+                chickenMinimap.className = 'minimap-chicken';
+                chickenMinimap.style.left = ${(parseFloat(chicken.style.left) / window.innerWidth) * 100}px;
+                chickenMinimap.style.top = ${(parseFloat(chicken.style.top) / window.innerHeight) * 100}px;
+                minimap.appendChild(chickenMinimap);
+            });
+        }
+
+        function gameLoop() {
+            updateZombiePositions();
+            updateChickenPositions();
+            handleCollisions();
+            updateDayNightCycle();
+            updateMinimap();
+            updateDayCounter();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateDayCounter() {
+            dayCounter.textContent = Day: ${day};
+            if (day > objectiveDays && !winModal.style.display) {
+                showModal(winModal);
+            }
+        }
+
+        function increaseDay() {
+            day++;
+            updateDayCounter();
+        }
+
+        setInterval(increaseDay, 60000); // Increase day every 1 minute
+
+        fireButton.addEventListener('click', fireButtonAction);
+
+        // Spawn initial NPCs and game objects
+        for (let i = 0; i < 3; i++) {
+            spawnNPC();
+            spawnZombie();
+        }
+
+        // Start the game loop
+        gameLoop();
+    </script>
+</body>
+</html>
